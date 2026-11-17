@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trustnobody-api
+spec:
+  # Tek kopya: SignalR bildirimleri bellekte (Redis backplane yok) ve aşama zamanlayıcısı (GamePhaseWorker) API'nin içinde.
+  # Birden fazla kopya için önce SignalR'a Redis backplane eklenmeli (bkz. README → Mimari notlar).
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654 # mcr.microsoft.com/dotnet/aspnet imajındaki "app" kullanıcısı
+        runAsGroup: 1654
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: api
+          image: trustnobody-api
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: trustnobody-api-config
+            # ConnectionStrings__Default, Jwt__Key: repoda değil (bkz. deploy/README.md)
+            - secretRef:
+                name: trustnobody-api-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          # Açılışta migration'lar uygulandığı için ilk başlangıç biraz sürebilir; startupProbe buna izin verir.
+          # /health veritabanına bakmaz (DB kısa süre düşse pod yeniden başlatılmasın).
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 3
+            failureThreshold: 40
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

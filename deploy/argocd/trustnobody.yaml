@@ -1,0 +1,26 @@
+# Tek uygulama: api + web + middleware (PostgreSQL ayrı repoda yönetilir). Hepsi deploy/kustomization.yaml'dan.
+# Kurulumda bir kez elle uygulanır: kubectl apply -f deploy/argocd/project.yaml -f deploy/argocd/trustnobody.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trustnobody
+  namespace: argocd
+spec:
+  project: trustnobody
+  source:
+    repoURL: https://github.com/onurozbk/TrustNobody.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trustnobody
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

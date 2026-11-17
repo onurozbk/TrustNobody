@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Yalnızca trustnobody namespace'ine ait Traefik middleware'leri.
+# Traefik'in kendisi (HelmChartConfig, ACME) tesekkurco reposundaki platform/traefik-config.yaml'da. Ona dokunma.
+resources:
+  - redirect-https.yaml

@@ -79,6 +79,10 @@ Tablolar: `users`, `games` (ayarlar `settings_*` kolonlarında), `game_players`,
 
 ## Web'e deploy
 
+**Canlı ortam (https://trustnobody.tesekkur.co):** GitHub Actions → GHCR → Argo CD → k3s. Kurulum ve günlük kullanım: [deploy/README.md](deploy/README.md).
+
+Tek makinede Docker Compose ile:
+
 ```bash
 cp .env.example .env        # JWT_KEY'i doldurun (openssl rand -base64 48)
 docker compose up -d --build

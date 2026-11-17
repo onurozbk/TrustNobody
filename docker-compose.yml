@@ -38,7 +38,7 @@ services:
         # Boş = API ile aynı origin (nginx /api ve /hubs isteklerini api servisine yönlendirir)
         EXPO_PUBLIC_API_URL: ${PUBLIC_API_URL:-}
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-8080}:8080"
     depends_on:
       - api
 

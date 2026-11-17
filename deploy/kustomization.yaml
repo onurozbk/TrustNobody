@@ -1,0 +1,10 @@
+# Argo CD'deki "trustnobody" uygulamasının (argocd/trustnobody.yaml) repodaki kaynakları.
+# Hepsi "trustnobody" namespace'inde; aynı VDS'teki tesekkurco ve birikim uygulamalarından ayrıdır.
+# Ortak Traefik ayarı (Let's Encrypt "letsencrypt" resolver'ı) tesekkurco reposunda durur; burada tekrarlanmaz.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: trustnobody
+resources:
+  - platform
+  - apps/api
+  - apps/web

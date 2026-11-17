@@ -1,0 +1,45 @@
+name: CI
+
+# Otomatik çalışmaz; GitHub'da Actions → CI → "Run workflow" ile elle başlatılır.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build backend/TrustNobody.slnx -c Release
+      - name: Domain testleri
+        run: dotnet test backend/TrustNobody.slnx -c Release --no-build
+
+  web:
+    name: Frontend (Expo)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Tip kontrolü
+        run: |
+          # expo-env.d.ts gitignore'da; normalde 'expo start' üretir.
+          echo '/// <reference types="expo/types" />' > expo-env.d.ts
+          npm run typecheck
+      - run: npm run lint
+      - name: Web derlemesi
+        run: npx expo export -p web

@@ -1,0 +1,109 @@
+e# Elle tetiklenir (Actions → Deploy → Run workflow):
+#   Docker image'ları build edilip GHCR'a gönderilir →
+#   deploy/apps/<servis>/kustomization.yaml'daki image tag'i commit SHA'sı ile güncellenip main'e commit'lenir →
+#   Argo CD (VDS) değişikliği görür ve k3s'e uygular (GitOps).
+#
+# Her push'ta otomatik deploy istersen "on:" altına şunu ekle:
+#   push:
+#     branches: [main]
+#     paths: ["backend/**", "frontend/**"]
+# (Bu workflow'un kendi commit'i GITHUB_TOKEN ile atıldığı için döngüye girmez.)
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/onurozbk
+  # Alan adı değişirse: burası + deploy/apps/web/ingress.yaml
+  SITE_URL: https://trustnobody.tesekkur.co
+
+jobs:
+  build:
+    name: Build ${{ matrix.service.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - name: api
+            image: trustnobody-api
+            context: backend
+            dockerfile: backend/Dockerfile
+          - name: web
+            image: trustnobody-web
+            context: frontend
+            dockerfile: frontend/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          # Yalnızca web imajı kullanır (derleme anında JS'e gömülür); API imajı yok sayar.
+          # EXPO_PUBLIC_API_URL boş: istemci API'ye aynı origin'den (/api, /hubs) gider, Ingress yönlendirir.
+          build-args: |
+            EXPO_PUBLIC_API_URL=
+            EXPO_PUBLIC_WEB_URL=${{ env.SITE_URL }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.service.image }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.service.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+
+  deploy:
+    name: Update manifests
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set image tags
+        run: |
+          yq -i '(.images[] | select(.name == "trustnobody-api")).newTag = "${{ github.sha }}"' deploy/apps/api/kustomization.yaml
+          yq -i '(.images[] | select(.name == "trustnobody-web")).newTag = "${{ github.sha }}"' deploy/apps/web/kustomization.yaml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy/
+          if git diff --cached --quiet; then
+            echo "Manifestlerde değişiklik yok"
+            exit 0
+          fi
+          git commit -m "deploy: ${GITHUB_SHA::7} [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1

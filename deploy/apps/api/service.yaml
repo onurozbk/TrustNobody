@@ -1,0 +1,11 @@
+# Cluster içi servis; dışarıdan yalnızca Ingress'teki /api ve /hubs yolları ile erişilir.
+apiVersion: v1
+kind: Service
+metadata:
+  name: trustnobody-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
