@@ -1,9 +1,9 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Check, Crown, EyeOff, Hand, Skull } from "../icons";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
-import { Appear, DrainBar } from "../motion";
-import type { ActionView, EventView, GameView, PlayerView, ReadyView, Role } from "../../api/types";
+import { View } from "react-native";
+import { Appear } from "../motion";
+import type { ActionView, EventView, GameView, PlayerView, ReadyView } from "../../api/types";
+import { TargetGrid, useOptimisticPick } from "./TargetGrid";
 import { formatClock } from "../../hooks/useCountdown";
 import { cn } from "../../lib/utils";
 import { colors, phaseInfo, roleInfo } from "../../theme";
@@ -70,163 +70,65 @@ export function PhaseHeader({ game, remaining }: { game: GameView; remaining: nu
   );
 }
 
-// ───────────── Rol kartı: varsayılan gizli, dokununca 5 sn görünür ─────────────
+// ───────────── Son olay: herkese açık en yeni olay, büyük ve okunur ─────────────
 
-const REVEAL_MS = 5000;
-
-export function RoleCard({ role, alive, secretInfo }: { role: Role; alive: boolean; secretInfo: string[] }) {
-  const [visible, setVisible] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [revealCount, setRevealCount] = useState(0);
-  const info = roleInfo[role];
-
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
-
-  const reveal = () => {
-    setVisible(true);
-    setRevealCount(c => c + 1);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setVisible(false), REVEAL_MS);
-  };
-
-  const hide = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setVisible(false);
-  };
-
-
+export function Spotlight({ game }: { game: GameView }) {
+  const latest = [...game.events].reverse().find(e => !e.isPrivate);
+  if (!latest) return null;
+  const phase = phaseInfo[latest.phase];
   return (
-    <Pressable
-      role="button"
-      accessibilityLabel={visible ? `Rolün: ${info.name}` : "Rolünü görmek için dokun"}
-      onPress={visible ? hide : reveal}
-      className="active:scale-[0.99]"
-    >
-      {visible ? (
-        <Appear kind="zoom" duration={250}>
-        <View className="overflow-hidden rounded-3xl border-2" style={{ borderColor: info.color }}>
-          <LinearGradient colors={[`${info.color}33`, `${info.color}08`]} style={{ padding: 24, alignItems: "center", gap: 8 }}>
-            <Text style={{ fontSize: 60, lineHeight: 72 }}>{info.emoji}</Text>
-            <Text variant="overline">Rolün</Text>
-            <Text className="text-3xl font-extrabold" style={{ color: info.color }}>{info.name}</Text>
-            <Text variant="muted" className="max-w-[300px] text-center">{info.description}</Text>
-            {secretInfo.map(s => (
-              <View key={s} className="bg-primary/15 border-primary/30 mt-1 rounded-xl border px-3 py-2">
-                <Text className="text-primary text-center text-sm font-bold">{s}</Text>
-              </View>
-            ))}
-            {!alive && (
-              <Badge variant="destructive" className="mt-1">
-                <Skull size={12} color={colors.destructive} />
-                <Text>Öldün, artık sadece izleyebilirsin</Text>
-              </Badge>
-            )}
-          </LinearGradient>
-          <View className="h-1 bg-white/5">
-            <DrainBar runKey={revealCount} duration={REVEAL_MS} color={info.color} />
-          </View>
+    <Appear key={latest.id} kind="up" duration={350}>
+      <View className="bg-card flex-row items-start gap-3 rounded-2xl border p-4" style={{ borderColor: `${phase.color}40` }}>
+        <View className="mt-1.5 h-2.5 w-2.5 rounded-full" style={{ backgroundColor: phase.color }} />
+        <View className="flex-1 gap-0.5">
+          <Text variant="overline" className="text-[10px]">Son olay</Text>
+          <Text className="text-base font-semibold leading-6">{latest.message}</Text>
         </View>
-        </Appear>
-      ) : (
-        <View className="border-border bg-card min-h-[140px] items-center justify-center gap-3 overflow-hidden rounded-3xl border-2 border-dashed p-6">
-          <LinearGradient
-            pointerEvents="none"
-            colors={["rgba(232,42,74,0.08)", "transparent", "rgba(154,133,249,0.08)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          <View className="bg-secondary h-14 w-14 items-center justify-center rounded-2xl">
-            <EyeOff size={24} color={colors.mutedForeground} />
-          </View>
-          <View className="items-center gap-1">
-            <Text className="font-semibold">Rolünü görmek için dokun</Text>
-            <Text variant="muted" className="text-xs">5 saniye görünür. Ekranını kimse görmesin 🤫</Text>
-          </View>
-          {!alive && (
-            <Badge variant="destructive">
-              <Skull size={12} color={colors.destructive} />
-              <Text>Öldün</Text>
-            </Badge>
-          )}
-        </View>
-      )}
-    </Pressable>
+      </View>
+    </Appear>
   );
 }
 
-// ───────────── Hamle paneli: gece aksiyonu ya da oy ─────────────
+// ───────────── Oylama paneli (herkese açık; oylar yüz yüze tartışılır) ─────────────
 
-export function ActionPanel({
+export function VotePanel({
   action,
   players,
-  busy,
-  accent,
   onSubmit,
 }: {
   action: ActionView;
   players: PlayerView[];
-  busy: boolean;
-  accent: string;
-  onSubmit: (targetId: string | null) => void;
+  onSubmit: (targetId: string | null) => Promise<unknown>;
 }) {
+  const { selected, pending, pick } = useOptimisticPick(action.currentTargetId, onSubmit);
   const byId = new Map(players.map(p => [p.id, p]));
-  const current = action.currentTargetId;
-  const disabled = action.locked || busy;
+  const voted = action.hasActed || pending;
 
   return (
     <Appear kind="up" duration={350}>
-      <Card style={{ borderColor: `${accent}66` }}>
+      <Card style={{ borderColor: `${colors.vote}66` }}>
         <CardHeader>
           <CardTitle>{action.prompt}</CardTitle>
-          {action.hasActed && !action.locked && (
-            <CardDescription>
-              Seçimin: <Text className="text-foreground text-sm font-semibold">{current ? byId.get(current)?.username : "Pas"}</Text>. Süre bitene kadar değiştirebilirsin.
-            </CardDescription>
-          )}
-          {action.locked && <CardDescription>Seçimini yaptın. Sonucu olaylar bölümünde görebilirsin.</CardDescription>}
+          <CardDescription>
+            {voted
+              ? <>Oyun: <Text className="text-foreground text-sm font-semibold">{selected ? byId.get(selected)?.username : "Pas"}</Text>. Süre bitene kadar değiştirebilirsin.</>
+              : "En çok oy alan asılır. Eşitlikte kimse asılmaz."}
+          </CardDescription>
         </CardHeader>
         <CardContent className="gap-3">
-          <View className="flex-row flex-wrap gap-2">
-            {action.targets.map(id => {
-              const p = byId.get(id);
-              const selected = current === id;
-              return (
-                <Pressable
-                  key={id}
-                  role="button"
-                  accessibilityState={{ selected, disabled }}
-                  disabled={disabled}
-                  onPress={() => onSubmit(id)}
-                  className={cn(
-                    "min-w-[46%] flex-1 flex-row items-center gap-3 rounded-2xl border p-3 active:opacity-80",
-                    "web:transition-colors web:hover:bg-accent",
-                    selected ? "bg-accent" : "border-border bg-background/40",
-                    action.locked && !selected && "opacity-40",
-                  )}
-                  style={selected ? { borderColor: accent } : undefined}
-                >
-                  <Avatar name={p?.username ?? "?"} size="sm" />
-                  <Text className={cn("flex-1 text-[15px]", selected ? "font-bold" : "font-medium")} numberOfLines={1}>
-                    {p?.username ?? "?"}{p?.isMe ? " (sen)" : ""}
-                  </Text>
-                  {selected && (
-                    <Appear kind="zoom" duration={200}>
-                      <View className="h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: accent }}>
-                        <Check size={14} color="#fff" strokeWidth={3} />
-                      </View>
-                    </Appear>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
+          <TargetGrid
+            targets={action.targets}
+            players={players}
+            selected={selected}
+            locked={action.locked}
+            disabled={pending}
+            accent={colors.vote}
+            onPick={id => void pick(id)}
+          />
           {action.canSkip && (
-            <Button variant="outline" disabled={busy} onPress={() => onSubmit(null)}>
-              {action.hasActed && current === null && <Check size={16} color={colors.foreground} />}
-              <Text>{action.hasActed && current === null ? "Pas geçtin" : "Pas geç"}</Text>
+            <Button variant="outline" disabled={pending} onPress={() => void pick(null)}>
+              {action.hasActed && selected === null && <Check size={16} color={colors.foreground} />}
+              <Text>{action.hasActed && selected === null ? "Pas geçtin" : "Pas geç"}</Text>
             </Button>
           )}
         </CardContent>
@@ -321,13 +223,18 @@ export function PlayerList({ game, onKick }: { game: GameView; onKick?: (p: Play
 
 // ───────────── Olay günlüğü (en yeni üstte, zaman çizelgesi) ─────────────
 
-export function EventLog({ events }: { events: EventView[] }) {
-  if (events.length === 0) return null;
-  const list = [...events].reverse();
+/**
+ * Oyun sürerken gizli olaylar (kahin sonucu vb.) burada GÖSTERİLMEZ, sadece gizli kartta durur.
+ * Oyun bitince sunucu herkese tüm olayları açar; o zaman "gizli" etiketiyle listelenir.
+ */
+export function EventLog({ events, ended, skipLatest }: { events: EventView[]; ended: boolean; skipLatest?: boolean }) {
+  let list = [...events].filter(e => ended || !e.isPrivate).reverse();
+  if (skipLatest) list = list.slice(1);
+  if (list.length === 0) return null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Olaylar</CardTitle>
+        <CardTitle>{skipLatest ? "Önceki olaylar" : "Olaylar"}</CardTitle>
       </CardHeader>
       <CardContent>
         {list.map((e, i) => {
@@ -346,7 +253,7 @@ export function EventLog({ events }: { events: EventView[] }) {
                 {e.isPrivate && (
                   <Badge variant="night" className="self-start">
                     <EyeOff size={11} color={colors.night} />
-                    <Text>Sadece sen görüyorsun</Text>
+                    <Text>Gizli bilgi</Text>
                   </Badge>
                 )}
                 <Text className={cn("text-sm leading-5", i === 0 ? "font-semibold" : "text-muted-foreground")}>{e.message}</Text>

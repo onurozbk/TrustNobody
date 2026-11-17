@@ -1,12 +1,14 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, RotateCcw } from "../../../components/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { errorMessage } from "../../../api/client";
 import { gamesApi } from "../../../api/endpoints";
 import type { GameSettings, PlayerView } from "../../../api/types";
-import { ActionPanel, EventLog, PhaseHeader, PlayerList, ReadyPanel, RoleCard, WinnerBanner } from "../../../components/game/GameParts";
+import { EventLog, PhaseHeader, PlayerList, ReadyPanel, Spotlight, VotePanel, WinnerBanner } from "../../../components/game/GameParts";
 import { LobbyPanel } from "../../../components/game/Lobby";
+import { PhaseSplash } from "../../../components/game/PhaseSplash";
+import { SecretCard } from "../../../components/game/SecretCard";
 import { ErrorAlert, Loading, Screen } from "../../../components/layout";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -23,6 +25,21 @@ export default function GameScreen() {
   const remaining = useCountdown(game?.phaseEndsAt ?? null, clockOffset, refresh);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Aşama geçişi: ilk yüklemede değil, oyun sırasında aşama/tur değişince tam ekran geçiş göster.
+  const phaseKey = game ? `${game.phase}-${game.round}` : null;
+  const [seenPhaseKey, setSeenPhaseKey] = useState<string | null>(null);
+  const [splashKey, setSplashKey] = useState<string | null>(null);
+  if (phaseKey !== seenPhaseKey) {
+    // React'in "prop değişince state'i ayarla" kalıbı (render sırasında, effect'siz)
+    setSeenPhaseKey(phaseKey);
+    if (seenPhaseKey !== null && phaseKey !== null && game?.phase !== "Lobby") setSplashKey(phaseKey);
+  }
+  useEffect(() => {
+    if (!splashKey) return;
+    const t = setTimeout(() => setSplashKey(null), 3200);
+    return () => clearTimeout(t);
+  }, [splashKey]);
 
   const goHome = () => (router.canGoBack() ? router.back() : router.replace("/home"));
 
@@ -96,8 +113,14 @@ export default function GameScreen() {
     }
   };
 
+  const act = (targetId: string | null) => run(() => gamesApi.action(code, targetId));
+  const vote = game.action?.type === "Vote" ? game.action : null;
+
   return (
-    <Screen glow={game.phase === "Lobby" || game.phase === "Ended" ? colors.primary : phase.color}>
+    <Screen
+      glow={game.phase === "Lobby" || game.phase === "Ended" ? colors.primary : phase.color}
+      overlay={splashKey === phaseKey ? <PhaseSplash game={game} onClose={() => setSplashKey(null)} /> : null}
+    >
       <View className="flex-row items-center justify-between">
         <Button variant="ghost" size="sm" onPress={goHome}>
           <ArrowLeft size={18} color={colors.foreground} />
@@ -139,28 +162,19 @@ export default function GameScreen() {
 
       {inProgress && (
         <>
-          <RoleCard role={game.myRole} alive={game.myAlive} secretInfo={game.secretInfo} />
-          {game.action && (
-            <ActionPanel action={game.action} players={game.players} busy={busy} accent={phase.color}
-              onSubmit={targetId => void run(() => gamesApi.action(code, targetId))} />
-          )}
-          {game.phase === "Night" && !game.action && game.myAlive && (
-            <Card className="items-center">
-              <CardHeader className="items-center">
-                <Text className="text-4xl">😴</Text>
-                <CardTitle>Bu gece yapacağın bir şey yok</CardTitle>
-                <CardDescription className="text-center">Gözlerini kapat ve bekle. Sabah olunca uyanırsın… umarız.</CardDescription>
-              </CardHeader>
-            </Card>
-          )}
+          {/* Son olay herkese açık; gece yeni olay yoksa gizli kart öne çıksın diye sadece gündüz/oylamada */}
+          {game.phase !== "Night" && <Spotlight game={game} />}
+          {vote && game.myAlive && <VotePanel action={vote} players={game.players} onSubmit={act} />}
           {game.ready && game.myAlive && (
             <ReadyPanel ready={game.ready} busy={busy} onToggle={() => void run(() => gamesApi.ready(code))} />
           )}
+          {/* Aşama değişince kart kapanır: yeni key = yeni bileşen */}
+          <SecretCard key={phaseKey} game={game} onAct={act} />
         </>
       )}
 
       <PlayerList game={game} onKick={game.isOwner && game.phase !== "Ended" ? kick : undefined} />
-      <EventLog events={game.events} />
+      <EventLog events={game.events} ended={game.phase === "Ended"} skipLatest={inProgress && game.phase !== "Night"} />
     </Screen>
   );
 }

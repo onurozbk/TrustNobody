@@ -39,7 +39,7 @@ export const roleInfo: Record<Role, { name: string; emoji: string; color: string
 
 export const phaseInfo: Record<GamePhase, { label: string; emoji: string; color: string; badge: BadgeVariant; icon: LucideIcon; hint: string }> = {
   Lobby: { label: "Lobi", emoji: "🏠", color: colors.mutedForeground, badge: "outline", icon: Home, hint: "Oyuncular toplanıyor" },
-  Night: { label: "Gece", emoji: "🌙", color: colors.night, badge: "night", icon: Moon, hint: "Herkes gözlerini kapatsın. Rolü olanlar telefonundan seçim yapsın." },
+  Night: { label: "Gece", emoji: "🌙", color: colors.night, badge: "night", icon: Moon, hint: "Herkes aynı anda kartını açıp seçimini yapsın, sonra telefonu bırakıp gözlerini kapatsın." },
   Day: { label: "Gündüz", emoji: "☀️", color: colors.day, badge: "day", icon: Sun, hint: "Yüz yüze tartışın. Kim yalan söylüyor?" },
   Voting: { label: "Oylama", emoji: "🗳️", color: colors.vote, badge: "vote", icon: Vote, hint: "Asılmasını istediğin kişiye oy ver ya da pas geç." },
   Ended: { label: "Bitti", emoji: "🏁", color: colors.mutedForeground, badge: "outline", icon: Flag, hint: "Oyun sona erdi" },

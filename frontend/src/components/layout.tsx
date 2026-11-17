@@ -13,7 +13,18 @@ import { Text } from "./ui/text";
  * Sayfa iskeleti: güvenli alan + kaydırma + web'de ortalanmış dar sütun.
  * Üstte, sayfanın ruh hâline göre renk alan yumuşak bir ışık var (oyunda aşama rengi).
  */
-export function Screen({ children, scroll = true, glow = colors.primary }: { children: ReactNode; scroll?: boolean; glow?: string }) {
+export function Screen({
+  children,
+  scroll = true,
+  glow = colors.primary,
+  overlay,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  glow?: string;
+  /** Tüm ekranı kaplayan katman (ör. aşama geçişi). */
+  overlay?: ReactNode;
+}) {
   const content = <View className="w-full max-w-[560px] gap-5 self-center">{children}</View>;
   return (
     <View className="bg-background flex-1">
@@ -32,6 +43,7 @@ export function Screen({ children, scroll = true, glow = colors.primary }: { chi
           <View className="grow px-4 pb-10 pt-4">{content}</View>
         )}
       </SafeAreaView>
+      {overlay}
     </View>
   );
 }
