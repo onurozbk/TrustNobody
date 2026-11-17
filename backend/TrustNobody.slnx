@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TrustNobody.Api/TrustNobody.Api.csproj" />
+    <Project Path="src/TrustNobody.Application/TrustNobody.Application.csproj" />
+    <Project Path="src/TrustNobody.Domain/TrustNobody.Domain.csproj" />
+    <Project Path="src/TrustNobody.Infrastructure/TrustNobody.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TrustNobody.Domain.Tests/TrustNobody.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
