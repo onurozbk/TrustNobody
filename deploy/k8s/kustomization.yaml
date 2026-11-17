@@ -13,7 +13,7 @@ images:
   # newTag'i GitHub Actions (.github/workflows/deploy.yml) her deploy'da günceller. Elle değiştirme.
   - name: trustnobody-api
     newName: ghcr.io/onurozbk/trustnobody-api
-    newTag: "latest"
+    newTag: "ff3134b1e0b1d351117544cbf8b01658d176c70a"
   - name: trustnobody-web
     newName: ghcr.io/onurozbk/trustnobody-web
-    newTag: "latest"
+    newTag: "ff3134b1e0b1d351117544cbf8b01658d176c70a"
