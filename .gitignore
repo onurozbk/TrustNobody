@@ -1,0 +1,10 @@
+.env
+.vs/
+.idea/
+.vscode/
+*.user
+
+# backend
+backend/**/bin/
+backend/**/obj/
+appsettings.*.local.json

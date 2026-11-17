@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Uygulama yalnızca koyu temada. shadcn "new-york" token'ları, kan kırmızısı vurgu. */
+:root {
+  --background: 270 22% 4%;
+  --foreground: 280 25% 95%;
+  --card: 270 18% 7%;
+  --card-foreground: 280 25% 95%;
+  --popover: 270 18% 8%;
+  --popover-foreground: 280 25% 95%;
+  --primary: 350 80% 52%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 270 14% 13%;
+  --secondary-foreground: 280 25% 95%;
+  --muted: 270 14% 12%;
+  --muted-foreground: 270 9% 62%;
+  --accent: 270 14% 15%;
+  --accent-foreground: 280 25% 95%;
+  --destructive: 0 72% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 270 13% 16%;
+  --input: 270 13% 19%;
+  --ring: 350 80% 52%;
+  --radius: 0.85rem;
+
+  --night: 255 90% 72%;
+  --day: 40 92% 62%;
+  --vote: 195 75% 56%;
+  --success: 150 62% 48%;
+}

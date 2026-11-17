@@ -1,0 +1,46 @@
+# Geliştirme:   docker compose up -d db                 → sadece PostgreSQL
+# Tam ortam:    docker compose up -d --build            → db + api + web (http://localhost:8080)
+name: trustnobody
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: trustnobody
+      POSTGRES_USER: trustnobody
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trustnobody}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trustnobody -d trustnobody"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=db;Port=5432;Database=trustnobody;Username=trustnobody;Password=${POSTGRES_PASSWORD:-trustnobody}
+      # .env dosyasında en az 32 karakter olmalı; yoksa API açılmaz
+      Jwt__Key: ${JWT_KEY:-}
+      RateLimiting__AuthPermitPerMinute: ${AUTH_RATE_LIMIT:-10}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Boş = API ile aynı origin (nginx /api ve /hubs isteklerini api servisine yönlendirir)
+        EXPO_PUBLIC_API_URL: ${PUBLIC_API_URL:-}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
