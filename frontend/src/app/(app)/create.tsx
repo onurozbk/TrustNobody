@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { ArrowLeft, Sparkles } from "lucide-react-native";
+import { ArrowLeft, Sparkles } from "../../components/icons";
 import { useState } from "react";
 import { View } from "react-native";
 import { errorMessage } from "../../api/client";

@@ -1,9 +1,9 @@
 import * as AlertDialogPrimitive from "@rn-primitives/alert-dialog";
 import * as React from "react";
 import { Platform, View, type ViewProps } from "react-native";
-import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import { FullWindowOverlay as RNFullWindowOverlay } from "react-native-screens";
 import { cn } from "../../lib/utils";
+import { DialogMotion } from "../motion";
 import { Text } from "./text";
 
 const AlertDialog = AlertDialogPrimitive.Root;
@@ -11,12 +11,6 @@ const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 const AlertDialogPortal = AlertDialogPrimitive.Portal;
 
 const FullWindowOverlay = Platform.OS === "ios" ? RNFullWindowOverlay : React.Fragment;
-
-/** Web'de animasyonu CSS (tailwindcss-animate) yapar; native'de Reanimated. */
-function NativeOnlyAnimatedView({ children, ...props }: React.ComponentProps<typeof Animated.View> & { children: React.ReactNode }) {
-  if (Platform.OS === "web") return <>{children}</>;
-  return <Animated.View {...props}>{children}</Animated.View>;
-}
 
 function AlertDialogOverlay({ className, children, ...props }: AlertDialogPrimitive.OverlayProps & { children: React.ReactNode }) {
   return (
@@ -29,9 +23,9 @@ function AlertDialogOverlay({ className, children, ...props }: AlertDialogPrimit
         )}
         {...props}
       >
-        <NativeOnlyAnimatedView entering={FadeIn.duration(180)} exiting={FadeOut.duration(150)}>
+        <DialogMotion kind="overlay">
           {children}
-        </NativeOnlyAnimatedView>
+        </DialogMotion>
       </AlertDialogPrimitive.Overlay>
     </FullWindowOverlay>
   );
@@ -41,7 +35,7 @@ function AlertDialogContent({ className, portalHost, ...props }: AlertDialogPrim
   return (
     <AlertDialogPortal hostName={portalHost}>
       <AlertDialogOverlay>
-        <NativeOnlyAnimatedView entering={ZoomIn.duration(200)}>
+        <DialogMotion kind="content">
           <AlertDialogPrimitive.Content
             className={cn(
               "bg-popover border-border z-50 flex w-full max-w-sm flex-col gap-6 rounded-2xl border p-6 shadow-2xl shadow-black",
@@ -50,7 +44,7 @@ function AlertDialogContent({ className, portalHost, ...props }: AlertDialogPrim
             )}
             {...props}
           />
-        </NativeOnlyAnimatedView>
+        </DialogMotion>
       </AlertDialogOverlay>
     </AlertDialogPortal>
   );

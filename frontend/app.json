@@ -27,7 +27,7 @@
       "backgroundColor": "#0e0b10"
     },
     "plugins": [
-      "expo-router",
+      ["expo-router", { "asyncRoutes": false }],
       "expo-status-bar",
       "expo-secure-store"
     ],

@@ -1,4 +1,4 @@
-import { Flag, Home, Moon, Sun, Vote, type LucideIcon } from "lucide-react-native";
+import { Flag, Home, Moon, Sun, Vote, type LucideIcon } from "./components/icons";
 import type { GamePhase, Role } from "./api/types";
 import type { BadgeVariant } from "./components/ui/badge";
 

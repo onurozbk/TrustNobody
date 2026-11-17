@@ -1,4 +1,4 @@
-import { Check, Copy, Pencil, Play, Share2 } from "lucide-react-native";
+import { Check, Copy, Pencil, Play, Share2 } from "../icons";
 import { useState } from "react";
 import { View } from "react-native";
 import { MIN_PLAYERS, type GameSettings, type GameView } from "../../api/types";

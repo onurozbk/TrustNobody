@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { CircleAlert, Minus, Plus, type LucideIcon } from "lucide-react-native";
+import { CircleAlert, Minus, Plus, type LucideIcon } from "./icons";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View, type TextInputProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

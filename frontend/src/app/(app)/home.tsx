@@ -1,9 +1,9 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import { ArrowRight, ChevronRight, LogOut, Plus, Users } from "lucide-react-native";
+import { ArrowRight, ChevronRight, LogOut, Plus, Users } from "../../components/icons";
 import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { Appear } from "../../components/motion";
 import { errorMessage } from "../../api/client";
 import { gamesApi } from "../../api/endpoints";
 import type { MyGame } from "../../api/types";
@@ -96,7 +96,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Oda kur: öne çıkan kart */}
-      <Animated.View entering={FadeInDown.duration(400)}>
+      <Appear kind="up">
         <Pressable onPress={() => router.push("/create")} className="active:opacity-90" role="button">
           <LinearGradient
             colors={["#e82a4a", "#9d1530", "#3d0815"]}
@@ -122,10 +122,10 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </Pressable>
-      </Animated.View>
+      </Appear>
 
       {/* Koda katıl */}
-      <Animated.View entering={FadeInDown.duration(400).delay(80)}>
+      <Appear kind="up" delay={80}>
         <Card>
           <CardHeader>
             <View className="flex-row items-center gap-2">
@@ -141,15 +141,15 @@ export default function HomeScreen() {
             </Button>
           </CardContent>
         </Card>
-      </Animated.View>
+      </Appear>
 
       <ErrorAlert message={error} />
 
       {games && games.length > 0 && (
-        <Animated.View entering={FadeInDown.duration(400).delay(160)} style={{ gap: 12 }}>
+        <Appear kind="up" delay={160} style={{ gap: 12 }}>
           <Text variant="overline" className="px-1">Devam eden oyunların</Text>
           {games.map(g => <GameRow key={g.code} g={g} />)}
-        </Animated.View>
+        </Appear>
       )}
     </Screen>
   );

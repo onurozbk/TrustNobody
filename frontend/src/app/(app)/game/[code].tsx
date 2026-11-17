@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, RotateCcw } from "lucide-react-native";
+import { ArrowLeft, RotateCcw } from "../../../components/icons";
 import { useState } from "react";
 import { View } from "react-native";
 import { errorMessage } from "../../../api/client";

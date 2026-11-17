@@ -1,8 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Check, Crown, EyeOff, Hand, Skull } from "lucide-react-native";
+import { Check, Crown, EyeOff, Hand, Skull } from "../icons";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
-import Animated, { Easing, FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming, ZoomIn } from "react-native-reanimated";
+import { Appear, DrainBar } from "../motion";
 import type { ActionView, EventView, GameView, PlayerView, ReadyView, Role } from "../../api/types";
 import { formatClock } from "../../hooks/useCountdown";
 import { cn } from "../../lib/utils";
@@ -28,7 +28,7 @@ export function PhaseHeader({ game, remaining }: { game: GameView; remaining: nu
   const urgent = remaining !== null && remaining <= 10;
 
   return (
-    <Animated.View key={game.phase} entering={FadeIn.duration(500)}>
+    <Appear key={game.phase} duration={500}>
       <View className="overflow-hidden rounded-3xl border" style={{ borderColor: `${phase.color}55` }}>
         <LinearGradient
           colors={[`${phase.color}38`, `${phase.color}0a`]}
@@ -66,7 +66,7 @@ export function PhaseHeader({ game, remaining }: { game: GameView; remaining: nu
           )}
         </LinearGradient>
       </View>
-    </Animated.View>
+    </Appear>
   );
 }
 
@@ -77,7 +77,7 @@ const REVEAL_MS = 5000;
 export function RoleCard({ role, alive, secretInfo }: { role: Role; alive: boolean; secretInfo: string[] }) {
   const [visible, setVisible] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const progress = useSharedValue(1);
+  const [revealCount, setRevealCount] = useState(0);
   const info = roleInfo[role];
 
   useEffect(() => () => {
@@ -86,8 +86,7 @@ export function RoleCard({ role, alive, secretInfo }: { role: Role; alive: boole
 
   const reveal = () => {
     setVisible(true);
-    progress.value = 1;
-    progress.value = withTiming(0, { duration: REVEAL_MS, easing: Easing.linear });
+    setRevealCount(c => c + 1);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setVisible(false), REVEAL_MS);
   };
@@ -97,7 +96,6 @@ export function RoleCard({ role, alive, secretInfo }: { role: Role; alive: boole
     setVisible(false);
   };
 
-  const barStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
   return (
     <Pressable
@@ -107,7 +105,7 @@ export function RoleCard({ role, alive, secretInfo }: { role: Role; alive: boole
       className="active:scale-[0.99]"
     >
       {visible ? (
-        <Animated.View entering={ZoomIn.duration(250)}>
+        <Appear kind="zoom" duration={250}>
         <View className="overflow-hidden rounded-3xl border-2" style={{ borderColor: info.color }}>
           <LinearGradient colors={[`${info.color}33`, `${info.color}08`]} style={{ padding: 24, alignItems: "center", gap: 8 }}>
             <Text style={{ fontSize: 60, lineHeight: 72 }}>{info.emoji}</Text>
@@ -127,10 +125,10 @@ export function RoleCard({ role, alive, secretInfo }: { role: Role; alive: boole
             )}
           </LinearGradient>
           <View className="h-1 bg-white/5">
-            <Animated.View style={[{ height: "100%", backgroundColor: info.color }, barStyle]} />
+            <DrainBar runKey={revealCount} duration={REVEAL_MS} color={info.color} />
           </View>
         </View>
-        </Animated.View>
+        </Appear>
       ) : (
         <View className="border-border bg-card min-h-[140px] items-center justify-center gap-3 overflow-hidden rounded-3xl border-2 border-dashed p-6">
           <LinearGradient
@@ -179,7 +177,7 @@ export function ActionPanel({
   const disabled = action.locked || busy;
 
   return (
-    <Animated.View entering={FadeInDown.duration(350)}>
+    <Appear kind="up" duration={350}>
       <Card style={{ borderColor: `${accent}66` }}>
         <CardHeader>
           <CardTitle>{action.prompt}</CardTitle>
@@ -215,11 +213,11 @@ export function ActionPanel({
                     {p?.username ?? "?"}{p?.isMe ? " (sen)" : ""}
                   </Text>
                   {selected && (
-                    <Animated.View entering={ZoomIn.duration(200)}>
+                    <Appear kind="zoom" duration={200}>
                       <View className="h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: accent }}>
                         <Check size={14} color="#fff" strokeWidth={3} />
                       </View>
-                    </Animated.View>
+                    </Appear>
                   )}
                 </Pressable>
               );
@@ -233,7 +231,7 @@ export function ActionPanel({
           )}
         </CardContent>
       </Card>
-    </Animated.View>
+    </Appear>
   );
 }
 
@@ -275,7 +273,11 @@ export function PlayerList({ game, onKick }: { game: GameView; onKick?: (p: Play
       </CardHeader>
       <CardContent className="gap-1">
         {game.players.map(p => {
-          const role = p.role ? roleInfo[p.role] : null;
+          // Sunucu kendi rolünü (vampirlere diğer vampirleri de) gönderir, ama oyun sürerken bunu listede
+          // açık göstermek gizli rol kartını anlamsız kılar: masadaki biri ekrana bakınca görür.
+          // Oyun sırasında yalnızca ölenlerin rolü (zaten herkese duyuruldu), oyun bitince hepsi gösterilir.
+          const publicRole = game.phase === "Ended" || !p.isAlive;
+          const role = p.role && publicRole ? roleInfo[p.role] : null;
           return (
             <View key={p.id} className={cn("min-h-[56px] flex-row items-center gap-3 rounded-xl px-2 py-1.5", p.isMe && "bg-accent/60")}>
               <View>
@@ -375,7 +377,7 @@ export function WinnerBanner({ game }: { game: GameView }) {
   const myTeamWon = vampires === (game.myRole === "Vampire");
   const color = vampires ? colors.primary : colors.success;
   return (
-    <Animated.View entering={ZoomIn.duration(400)}>
+    <Appear kind="zoom">
       <View className="overflow-hidden rounded-3xl border-2" style={{ borderColor: color }}>
         <LinearGradient colors={[`${color}40`, `${color}08`]} style={{ padding: 28, alignItems: "center", gap: 8 }}>
           <Text style={{ fontSize: 64, lineHeight: 76 }}>{vampires ? "🩸" : "🎉"}</Text>
@@ -387,6 +389,6 @@ export function WinnerBanner({ game }: { game: GameView }) {
           </Badge>
         </LinearGradient>
       </View>
-    </Animated.View>
+    </Appear>
   );
 }

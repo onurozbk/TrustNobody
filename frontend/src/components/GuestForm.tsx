@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react-native";
+import { ArrowRight } from "./icons";
 import { useState } from "react";
 import { errorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";

@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { Appear } from "./motion";
 import { Text } from "./ui/text";
 
 const FEATURES = ["🎭 Anlatıcı yok", "👥 4-30 oyuncu", "⚡ Kayıt şart değil"];
@@ -8,7 +8,7 @@ const FEATURES = ["🎭 Anlatıcı yok", "👥 4-30 oyuncu", "⚡ Kayıt şart d
 /** Giriş ekranlarının üstündeki logo + slogan. */
 export function Brand({ compact }: { compact?: boolean }) {
   return (
-    <Animated.View entering={FadeInDown.duration(500)}>
+    <Appear kind="up" duration={500}>
       <View className="items-center gap-4 pt-6">
       <View className="rounded-[28px] shadow-2xl shadow-primary/60" style={{ transform: [{ rotate: "-6deg" }] }}>
         <LinearGradient
@@ -38,6 +38,6 @@ export function Brand({ compact }: { compact?: boolean }) {
         </View>
       )}
       </View>
-    </Animated.View>
+    </Appear>
   );
 }
