@@ -1,0 +1,22 @@
+# Bir kez uygula:  kubectl apply -f deploy/argocd/application.yaml
+# Argo CD main dalındaki deploy/k8s klasörünü izler; değişiklik olunca otomatik deploy eder.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trustnobody
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/onurozbk/TrustNobody.git
+    targetRevision: main
+    path: deploy/k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trustnobody
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

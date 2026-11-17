@@ -1,0 +1,19 @@
+# Argo CD bu klasörü izler (bkz. deploy/argocd/application.yaml).
+# Elle uygulamak için:  kubectl apply -k deploy/k8s
+# (Önce trustnobody-secrets secret'ını oluştur. Bkz. secret.example.yaml)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: trustnobody
+resources:
+  - namespace.yaml
+  - api.yaml
+  - web.yaml
+  - ingress.yaml
+images:
+  # newTag'i GitHub Actions (.github/workflows/deploy.yml) her deploy'da günceller. Elle değiştirme.
+  - name: trustnobody-api
+    newName: ghcr.io/onurozbk/trustnobody-api
+    newTag: "latest"
+  - name: trustnobody-web
+    newName: ghcr.io/onurozbk/trustnobody-web
+    newTag: "latest"

@@ -1,0 +1,42 @@
+# k3s'in varsayılan ingress controller'ı Traefik.
+# HTTPS: Traefik'in kendi Let's Encrypt resolver'ı (letsencrypt). sudoku, birikim ve tesekkurco ile aynı.
+#   /api   → API (REST)
+#   /hubs  → API (SignalR WebSocket; Traefik WebSocket'i ek ayarsız geçirir)
+#   /      → web (Expo web, nginx)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trustnobody
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: trustnobody-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [trustnobody.tesekkur.co]
+  rules:
+    - host: trustnobody.tesekkur.co
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: trustnobody-api, port: { name: http } }
+          - path: /hubs
+            pathType: Prefix
+            backend:
+              service: { name: trustnobody-api, port: { name: http } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: trustnobody-web, port: { name: http } }
+---
+# http:// isteklerini https://'e yönlendirir
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true

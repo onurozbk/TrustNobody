@@ -79,9 +79,41 @@ Tablolar: `users`, `games` (ayarlar `settings_*` kolonlarında), `game_players`,
 
 ## Web'e deploy
 
-**Canlı ortam (https://trustnobody.tesekkur.co):** GitHub Actions → GHCR → Argo CD → k3s. Kurulum ve günlük kullanım: [deploy/README.md](deploy/README.md).
+### Canlı ortam: k3s + Argo CD (https://trustnobody.tesekkur.co)
 
-Tek makinede Docker Compose ile:
+**Deploy:** GitHub'da **Actions → Build & Deploy → Run workflow**. İmajlar `ghcr.io/onurozbk/trustnobody-{api,web}` olarak derlenir, `deploy/k8s/kustomization.yaml`'daki tag commit SHA'sı ile güncellenip commit'lenir, Argo CD de bu değişikliği k3s'e uygular. Birkaç dakikada canlıya çıkar.
+
+Trafik (Traefik Ingress): `/api` ve `/hubs` (SignalR) → API, geri kalanı → web (nginx). Sertifikayı Traefik'in `letsencrypt` resolver'ı alır.
+
+**İlk kurulum (bir kez):**
+
+1. **DNS:** `trustnobody.tesekkur.co` için sunucu IP'sine A kaydı. Cloudflare proxy kullanılıyorsa WebSockets açık olmalı.
+2. **Veritabanı:** PostgreSQL sunucunda kullanıcıyı ve veritabanını oluştur (önce dosyadaki şifreyi değiştir):
+   ```bash
+   psql -h <pg-sunucu> -U postgres -f deploy/k8s/db-setup.sql
+   ```
+   Tabloları API ilk açılışta oluşturur.
+3. **Namespace ve secret'lar:**
+   ```bash
+   kubectl create namespace trustnobody
+   # ghcr.io paketleri private ise (classic PAT: read:packages)
+   kubectl -n trustnobody create secret docker-registry ghcr \
+     --docker-server=ghcr.io --docker-username=onurozbk --docker-password=<PAT>
+   kubectl -n trustnobody create secret generic trustnobody-secrets \
+     --from-literal=ConnectionStrings__Default='Host=<pg-sunucu>;Port=5432;Database=trustnobody;Username=trustnobody;Password=<şifre>' \
+     --from-literal=Jwt__Key="$(openssl rand -base64 48)"
+   ```
+4. **GitHub:** Settings → Actions → General → Workflow permissions: **Read and write**. Sonra **Build & Deploy**'u bir kez çalıştır.
+5. **Argo CD:** İlk build bittikten sonra: `kubectl apply -f deploy/argocd/application.yaml`
+   (Repo private ise Argo CD'ye repo erişimi de tanımlanmalı.)
+
+Durum ve log: `kubectl -n trustnobody get pods,ingress`, `kubectl -n trustnobody logs deploy/trustnobody-api -f`. Secret değişirse: `kubectl -n trustnobody rollout restart deploy/trustnobody-api`.
+
+API **tek kopya** çalışır: SignalR bildirimleri bellekte tutuluyor. Ölçeklemek için önce Redis backplane eklenmeli.
+
+Mobil yayın build'lerinde (EAS) `EXPO_PUBLIC_API_URL=https://trustnobody.tesekkur.co` verilmeli.
+
+### Tek makinede Docker Compose ile
 
 ```bash
 cp .env.example .env        # JWT_KEY'i doldurun (openssl rand -base64 48)

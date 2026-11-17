@@ -1,12 +1,17 @@
 # nginx imajı açılışta bu şablondaki ${API_UPSTREAM} değerini ortam değişkeniyle doldurur
 # (/etc/nginx/templates → /etc/nginx/conf.d). Diğer $değişkenler nginx'in kendisine aittir, dokunulmaz.
 #   docker compose: API_UPSTREAM=http://api:8080 (Dockerfile varsayılanı)
-#   k3s:            API_UPSTREAM=http://trustnobody-api:8080 (deploy/apps/web/deployment.yaml)
+#   k3s:            API_UPSTREAM=http://trustnobody-api (deploy/k8s/web.yaml)
 #                   Orada /api ve /hubs zaten Ingress'ten doğrudan API'ye gider.
 server {
     listen 8080;
     server_name _;
     root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
 
     # Kubernetes probe'ları için hafif sağlık ucu
     location = /healthz {

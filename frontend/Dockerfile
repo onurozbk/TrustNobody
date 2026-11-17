@@ -18,7 +18,7 @@ ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL \
 RUN npx expo export -p web
 
 # root olmadan çalışan nginx (8080'i dinler); k3s'te runAsNonRoot ile uyumlu
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.29-alpine
 ENV API_UPSTREAM=http://api:8080
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html

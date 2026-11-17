@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trustnobody-web
+  labels: { app: trustnobody-web }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels: { app: trustnobody-web }
+  template:
+    metadata:
+      labels: { app: trustnobody-web }
+    spec:
+      imagePullSecrets:
+        - name: ghcr # ghcr.io paketleri private ise gerekli
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: trustnobody-web # kustomization.yaml → images
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            # Ingress /api ve /hubs'ı zaten API'ye yönlendirir; bu sadece nginx içi yedek proxy
+            - { name: API_UPSTREAM, value: "http://trustnobody-api" }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trustnobody-web
+  labels: { app: trustnobody-web }
+spec:
+  selector: { app: trustnobody-web }
+  ports:
+    - { name: http, port: 80, targetPort: http }

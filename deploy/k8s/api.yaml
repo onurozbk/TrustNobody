@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trustnobody-api
+  labels: { app: trustnobody-api }
+spec:
+  # Tek kopya: SignalR bildirimleri bellekte (Redis backplane yok), aşama zamanlayıcısı da API'nin içinde.
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels: { app: trustnobody-api }
+  template:
+    metadata:
+      labels: { app: trustnobody-api }
+    spec:
+      imagePullSecrets:
+        - name: ghcr # ghcr.io paketleri private ise gerekli
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654 # .NET imajındaki "app" kullanıcısı
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: api
+          image: trustnobody-api # kustomization.yaml → images
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: ASPNETCORE_ENVIRONMENT, value: Production }
+            - { name: Database__MigrateOnStartup, value: "true" }
+            - { name: TZ, value: Europe/Istanbul }
+          envFrom:
+            # ConnectionStrings__Default ve Jwt__Key anahtarlarını içerir (bkz. README / secret.example.yaml)
+            - secretRef: { name: trustnobody-secrets }
+          # Açılışta migration'lar uygulanır; startupProbe ilk açılışa zaman tanır.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 384Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trustnobody-api
+  labels: { app: trustnobody-api }
+spec:
+  selector: { app: trustnobody-api }
+  ports:
+    - { name: http, port: 80, targetPort: http }
